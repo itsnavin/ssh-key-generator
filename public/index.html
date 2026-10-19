@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'; manifest-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>SSH Key Studio - browser-local SSH keys</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="wrap">
+    <p class="eyebrow">LOCAL BY DESIGN / OPENSSH COMPATIBLE</p>
+    <h1>Your keys.<br>Your machine.</h1>
+    <p class="lead">Generate an SSH key pair in your browser, then prepare your server login configuration. No account, credentials or server connection needed.</p>
+    <div class="trust">WebCrypto randomness &middot; No key uploads &middot; No saved keys</div>
+  </header>
+  <main class="wrap">
+    <aside class="notice" aria-label="Security model">
+      <strong>Trust the browser before trusting the key.</strong>
+      You must trust this page's origin, downloaded scripts, browser and extensions. For sensitive production use, local OpenSSH is safer:
+      <code>ssh-keygen -t ed25519</code>. This app cannot protect you from a compromised origin or device.
+    </aside>
+    <noscript><p class="notice">JavaScript is required for local generation. You can instead run ssh-keygen -t ed25519 on your machine.</p></noscript>
+    <div class="columns">
+      <section class="card" aria-labelledby="generate-title">
+        <p class="step">01 / CREATE YOUR IDENTITY</p>
+        <h2 id="generate-title">Generate a key pair</h2>
+        <form id="key-form">
+          <label for="algorithm">Key algorithm</label>
+          <select id="algorithm">
+            <option value="ed25519">Ed25519 - recommended</option>
+            <option value="rsa3072">RSA - 3072 bits</option>
+            <option value="rsa4096">RSA - 4096 bits</option>
+          </select>
+          <p class="hint">Ed25519 is compact and modern. RSA 3072 offers roughly 128-bit classical security; 4096 uses larger keys and is slower. The ssh-rsa key type does not require deprecated SHA-1 signatures: modern OpenSSH uses RSA SHA-2.</p>
+          <label for="comment">Key comment <span class="optional">(optional, public)</span></label>
+          <input id="comment" maxlength="256" placeholder="laptop-personal" autocomplete="off" spellcheck="false">
+          <p class="hint">A label, not a password. Included in exported keys. Up to 256 UTF-8 bytes.</p>
+          <div class="actions">
+            <button id="generate" type="submit">Generate key pair</button>
+            <button id="cancel" type="button" class="secondary" hidden>Cancel generation</button>
+            <button id="reset" type="button" class="quiet">Reset &amp; clear</button>
+          </div>
+        </form>
+        <p id="status" role="status" aria-live="polite">Ready. Keys stay in memory until you download or clear them.</p>
+        <section id="result" hidden aria-labelledby="result-title">
+          <h3 id="result-title">Your generated key</h3>
+          <p id="key-label" class="hint"></p>
+          <label for="public-key">Public key - safe to install on your server</label>
+          <textarea id="public-key" readonly rows="4" spellcheck="false"></textarea>
+          <p class="hint">OpenSSH SHA256 fingerprint</p>
+          <code id="fingerprint" class="fingerprint"></code>
+          <div class="actions">
+            <button id="copy-public" type="button" class="secondary">Copy public key</button>
+            <button id="download-public" type="button" class="secondary">Download .pub</button>
+          </div>
+          <div class="private">
+            <h3>Private key: hidden, unencrypted export</h3>
+            <p>The private key is never displayed or copied. Anyone with its downloaded file can use it. Never upload it here, send it to a server, or share it.</p>
+            <label class="check"><input id="acknowledge" type="checkbox"> I understand the download is unencrypted and must be protected locally.</label>
+            <button id="download-private" type="button">Download private key</button>
+            <p class="hint">No browser passphrase encryption is offered. After saving, restrict file access and add a passphrase using <code>ssh-keygen -p -f ~/.ssh/id_ed25519</code> (use your actual path; <code>id_rsa</code> for RSA).</p>
+          </div>
+        </section>
+      </section>
+      <section class="card" aria-labelledby="config-title">
+        <p class="step">02 / SET UP YOUR CONNECTION</p>
+        <h2 id="config-title">SSH login configuration</h2>
+        <p class="hint">This creates client settings, not remote users or passwords. No connection is made.</p>
+        <form id="config-form">
+          <label for="alias">Connection alias</label>
+          <input id="alias" name="alias" value="my-server" required maxlength="64" autocomplete="off" spellcheck="false">
+          <label for="hostname">Server hostname or IP address</label>
+          <input id="hostname" name="hostname" value="server.example.com" required maxlength="253" autocomplete="off" spellcheck="false" aria-describedby="host-help">
+          <p class="hint" id="host-help">DNS name, IPv4, or bare IPv6. No https:// prefix or port.</p>
+          <div class="field-row">
+            <div><label for="username">Existing server username</label><input id="username" name="username" value="deploy" required maxlength="64" autocomplete="off" spellcheck="false"></div>
+            <div><label for="port">SSH port</label><input id="port" name="port" value="22" required inputmode="numeric" maxlength="5" autocomplete="off"></div>
+          </div>
+          <label for="identity">Private-key path on your machine</label>
+          <input id="identity" name="identity" value="~/.ssh/id_ed25519" required maxlength="240" autocomplete="off" spellcheck="false" aria-describedby="path-help">
+          <p class="hint" id="path-help">Move your downloaded private key to this path; this is not the browser download location. For RSA use id_rsa. Windows: C:/Users/Name/.ssh/id_ed25519. Quoted paths can contain spaces; config tokens and environment substitutions are intentionally unsupported.</p>
+        </form>
+        <p id="config-error" class="error" role="alert"></p>
+        <p id="config-status" class="hint" role="status"></p>
+        <label for="config-output">Configuration snippet</label>
+        <textarea id="config-output" readonly rows="8" spellcheck="false"></textarea>
+        <div class="actions">
+          <button id="copy-config" type="button" class="secondary">Copy config</button>
+          <button id="download-config" type="button" class="secondary">Download snippet</button>
+        </div>
+        <p class="hint">Review and append to <code>~/.ssh/config</code>; never overwrite existing configuration. Earlier Host entries may take precedence.</p>
+      </section>
+    </div>
+    <section class="card guide" aria-labelledby="guide-title">
+      <p class="step">03 / CONNECT WITH CONFIDENCE</p>
+      <h2 id="guide-title">From download to first login</h2>
+      <ol>
+        <li><strong>Save both files.</strong> Move the private key and .pub file to your SSH directory, matching IdentityFile above. The examples below use Ed25519 and Linux/macOS; use id_rsa for RSA and replace the example host, port and username.</li>
+        <li><strong>Protect your private key locally.</strong><pre><code>mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_ed25519
+ssh-keygen -p -f ~/.ssh/id_ed25519</code></pre>On Windows, use your user-profile .ssh folder and restrict the private file's ACL to your account with Windows file permissions. Unix chmod commands do not configure Windows ACLs.</li>
+        <li><strong>Install only the public key.</strong> You must already have authorized access to the server.<pre><code>ssh-copy-id -i ~/.ssh/id_ed25519.pub -p 22 deploy@server.example.com</code></pre>If ssh-copy-id is unavailable, use your hosting provider's authorized-key setup or append the .pub line to the remote user's <code>~/.ssh/authorized_keys</code> through an existing authenticated session. On a Unix server, the user's <code>~/.ssh</code> should be mode 700 and <code>authorized_keys</code> mode 600, owned by that user. Never transfer the private key.</li>
+        <li><strong>Review and append your config.</strong> Save the snippet in your local <code>~/.ssh/config</code> without replacing other entries; on Unix set <code>chmod 600 ~/.ssh/config</code>. Then run <code>ssh my-server</code> using your chosen alias.</li>
+        <li><strong>Verify the server separately.</strong> Confirm the server's host-key fingerprint with your administrator or provider before accepting it. The fingerprint generated above identifies your user key, not the server. Keep your current session open and retain password/recovery access until a new key-based login succeeds. Do not blindly disable password authentication.</li>
+        <li><strong>Optional: use an agent.</strong> On Linux/macOS, start an agent with <code>eval "$(ssh-agent -s)"</code> if needed, then <code>ssh-add ~/.ssh/id_ed25519</code>. On Windows, use your configured OpenSSH Authentication Agent. An agent can cache unlocked keys; lock/remove them when no longer needed. <code>IdentitiesOnly yes</code> keeps the configured identity selected.</li>
+      </ol>
+      <p class="notice">Reset drops page references and revokes download URLs. JavaScript garbage collection, browser memory, OS swap and saved downloads cannot be securely erased by this app. No keys are stored in app storage, URLs or analytics. Static assets are downloaded from this origin; generated key data never enters a request.</p>
+    </section>
+  </main>
+  <footer class="wrap">SSH Key Studio &middot; Browser-local, not browser-to-server &middot; <a href="https://github.com/itsnavin/ssh-key-generator" rel="noreferrer">Source &amp; security model</a></footer>
+</body>
+</html>

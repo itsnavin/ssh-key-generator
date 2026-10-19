@@ -1,0 +1,7 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+*.pem
+id_ed25519*
+id_rsa*

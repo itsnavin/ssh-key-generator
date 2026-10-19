@@ -1,0 +1,21 @@
+{
+  "name": "browser-local-ssh-key-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-local OpenSSH key generation and safe SSH client configuration",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "start": "node scripts/serve.cjs",
+    "test": "node --test tests/core.test.cjs",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "buffer": "6.0.3",
+    "randombytes": "2.1.0",
+    "sshpk": "1.18.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "browserify": "17.0.1"
+  }
+}
